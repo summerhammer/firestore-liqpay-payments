@@ -5,6 +5,8 @@
     "lint:fix": "eslint \"src/**/*\" --fix",
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "serve": "npm run build && (cd integration-tests && firebase emulators:start --project=demo-test)",
+    "serve:watch": "concurrently \"npm run build:watch\" \"(cd integration-tests && firebase emulators:start --project=demo-test)\"",
     "mocha": "mocha '**/*.spec.ts'",
     "test": "(cd integration-tests && firebase emulators:exec 'npm run mocha' -P demo-test)"
   },

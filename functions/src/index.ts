@@ -8,10 +8,11 @@
  * https://firebase.google.com/docs/extensions/publishers
  */
 
+import * as express from "express";
 import * as functions from "firebase-functions";
 
 exports.greetTheWorld = functions.https.onRequest(
-  (req: functions.Request, res: functions.Response) => {
+  (req: functions.https.Request, res: express.Response) => {
     // Here we reference a user-provided parameter
     // (its value is provided by the user during installation)
     const consumerProvidedGreeting = process.env.GREETING;
@@ -20,7 +21,7 @@ exports.greetTheWorld = functions.https.onRequest(
     // (its value is provided by Firebase after installation)
     const instanceId = process.env.EXT_INSTANCE_ID;
 
-    const greeting = `${consumerProvidedGreeting} World from ${instanceId}`;
+    const greeting = `${consumerProvidedGreeting} World from ${instanceId}!`;
 
     res.send(greeting);
   });
