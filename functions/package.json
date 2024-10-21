@@ -5,29 +5,39 @@
     "lint:fix": "eslint \"src/**/*\" --fix",
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "serve": "npm run build && (cd integration-tests && firebase emulators:start --project=demo-test)",
-    "serve:watch": "concurrently \"npm run build:watch\" \"(cd integration-tests && firebase emulators:start --project=demo-test)\"",
+    "serve": "npm run build && (cd integration-tests && npm run build && firebase emulators:start --project=demo-test)",
+    "serve:watch": "concurrently \"npm run build:watch\" \"(cd integration-tests && npm run build:watch)\" \"(cd integration-tests && firebase emulators:start --project=demo-test)\"",
     "mocha": "mocha '**/*.spec.ts'",
     "test": "(cd integration-tests && firebase emulators:exec 'npm run mocha' -P demo-test)"
   },
   "main": "lib/index.js",
   "dependencies": {
-    "firebase-admin": "^12.6.0",
-    "firebase-functions": "^6.0.1"
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0",
+    "jsonata": "^2.0.5"
   },
   "devDependencies": {
     "@types/chai": "^4.3.4",
+    "@types/chai-datetime": "^1.0.0",
+    "@types/localtunnel": "^2.0.4",
     "@types/mocha": "^10.0.1",
+    "@types/proxyquire": "^1.3.31",
+    "@types/sinon": "^17.0.3",
     "@typescript-eslint/eslint-plugin": "^5.12.0",
     "@typescript-eslint/parser": "^5.12.0",
-    "eslint": "^8.15.1",
-    "eslint-plugin-import": "^2.26.0",
-    "eslint-config-google": "^0.14.0",
-    "typescript": "^4.9.0",
-    "axios": "^1.3.2",
     "chai": "^4.3.7",
+    "chai-datetime": "^1.8.1",
+    "dotenv": "^16.4.5",
+    "dotenv-cli": "^7.4.2",
+    "eslint": "^8.15.1",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-import": "^2.26.0",
+    "localtunnel": "^2.0.2",
     "mocha": "^10.2.0",
-    "ts-node": "^10.4.0"
+    "puppeteer": "^23.6.0",
+    "sinon": "^19.0.2",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.9.0"
   },
   "private": true
 }

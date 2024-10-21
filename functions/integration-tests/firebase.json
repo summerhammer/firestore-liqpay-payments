@@ -1,14 +1,41 @@
 {
+  "extensions": {
+    "firestore-liqpay-payments": "../.."
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
   "emulators": {
     "functions": {
-      "port": 5001
+      "port": 9001
+    },
+    "firestore": {
+      "port": 9002
+    },
+    "storage": {
+      "port": 9003
     },
     "ui": {
       "enabled": true
     },
     "singleProjectMode": true
-  },
-  "extensions": {
-    "firestore-liqpay-payments": "../.."
   }
 }

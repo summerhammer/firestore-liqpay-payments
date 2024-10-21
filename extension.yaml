@@ -1,61 +1,221 @@
-# Learn detailed information about the fields of an extension.yaml file in the docs:
-# https://firebase.google.com/docs/extensions/reference/extension-yaml
-
-# Identifier for your extension
-# TODO: Replace this with an descriptive name for your extension.
-name: greet-the-world  
+name: firestore-liqpay-payments
 version: 0.0.1  # Follow semver versioning
-specVersion: v1beta  # Version of the Firebase Extensions specification
+specVersion: v1beta
 
-# Friendly display name for your extension (~3-5 words)
-displayName: Greet the world
+displayName: Run Payments with LiqPay Checkout
 
-# Brief description of the task your extension performs (~1 sentence)
 description: >-
   Sends the world a greeting.
 
-license: Apache-2.0  # https://spdx.org/licenses/
+license: Apache-2.0
 
-# Public URL for the source code of your extension.
-# TODO:  Replace this with your GitHub repo.
-sourceUrl: https://github.com/ORG_OR_USER/REPO_NAME
+sourceUrl: https://github.com/rozd/firestore-liqpay-payments
 
-# Specify whether a paid-tier billing plan is required to use your extension.
-# Learn more in the docs: https://firebase.google.com/docs/extensions/reference/extension-yaml#billing-required-field
+author:
+  authorName: Summer Hammer
+  url: https://summerhammer.dev
+
+contributors:
+  - authorName: Max Rozdobudko
+    url: https://github.com/rozd
+
 billingRequired: true
 
-# In an `apis` field, list any Google APIs (like Cloud Translation, BigQuery, etc.)
-# required for your extension to operate.
-# Learn more in the docs:
-# https://firebase.google.com/docs/extensions/reference/extension-yaml#apis-field
+externalServices:
+  - name: Stripe
+    pricingUri: https://www.liqpay.ua/en/tariffs
 
-# In a `roles` field, list any IAM access roles required for your extension to operate.
-# Learn more in the docs:
-# https://firebase.google.com/docs/extensions/reference/extension-yaml#roles-field
+roles:
+  - role: datastore.user
+    reason: >-
+      Allows the extension to store payment status updates in Cloud
+      Firestore.
 
-# In the `resources` field, list each of your extension's functions, including the trigger for each function.
-# Learn more in the docs:
-# https://firebase.google.com/docs/extensions/reference/extension-yaml#resources-field
 resources:
-  - name: greetTheWorld
+  - name: handleInvoicePlaced
     type: firebaseextensions.v1beta.function
     description: >-
-      HTTP request-triggered function that responds with a specified greeting message
+      Initiates a payment with LiqPay Checkout.
     properties:
-      # httpsTrigger is used for an HTTP triggered function.
-      httpsTrigger: {}
-      runtime: "nodejs16"
+      location: ${LOCATION}
+      runtime: nodejs18
+      eventTrigger:
+        eventType: providers/cloud.firestore/eventTypes/document.create
+        resource: projects/${PROJECT_ID}/databases/(default)/documents/${INVOICES_COLLECTION}/{id}
 
-# In the `params` field, set up your extension's user-configured parameters.
-# Learn more in the docs:
-# https://firebase.google.com/docs/extensions/reference/extension-yaml#params-field
-params:
-  - param: GREETING
-    label: Greeting for the world
+  - name: handlePaymentStatus
+    type: firebaseextensions.v1beta.function
     description: >-
-      What do you want to say to the world?
-      For example, Hello world? or What's up, world?
-    type: string
-    default: Hello
+      Handles LiqPay webhook events to keep payment statuses in sync.
+    properties:
+      location: ${LOCATION}
+      runtime: nodejs18
+      httpsTrigger: {}
+
+params:
+  - param: LOCATION
+    label: Cloud Functions deployment location
+    description: >-
+      Where do you want to deploy the functions created for this extension? You
+      usually want a location close to your database. For help selecting a
+      location, refer to the [location selection
+      guide](https://firebase.google.com/docs/functions/locations).
+    type: select
+    options:
+      - label: Iowa (us-central1)
+        value: us-central1
+      - label: South Carolina (us-east1)
+        value: us-east1
+      - label: Northern Virginia (us-east4)
+        value: us-east4
+      - label: Oregon (us-west1)
+        value: us-west1
+      - label: Los Angeles (us-west2)
+        value: us-west2
+      - label: Salt Lake City (us-west3)
+        value: us-west3
+      - label: Las Vegas (us-west4)
+        value: us-west4
+      - label: Warsaw (europe-central2)
+        value: europe-central2
+      - label: Belgium (europe-west1)
+        value: europe-west1
+      - label: London (europe-west2)
+        value: europe-west2
+      - label: Frankfurt (europe-west3)
+        value: europe-west3
+      - label: Zurich (europe-west6)
+        value: europe-west6
+      - label: Hong Kong (asia-east2)
+        value: asia-east2
+      - label: Tokyo (asia-northeast1)
+        value: asia-northeast1
+      - label: Osaka (asia-northeast2)
+        value: asia-northeast2
+      - label: Seoul (asia-northeast3)
+        value: asia-northeast3
+      - label: Mumbai (asia-south1)
+        value: asia-south1
+      - label: Jakarta (asia-southeast2)
+        value: asia-southeast2
+      - label: Montreal (northamerica-northeast1)
+        value: northamerica-northeast1
+      - label: Sao Paulo (southamerica-east1)
+        value: southamerica-east1
+      - label: Sydney (australia-southeast1)
+        value: australia-southeast1
+    default: us-central1
     required: true
-    immutable: false
+    immutable: true
+
+  - param: INVOICES_COLLECTION
+    label: Invoices collection
+    required: true
+    description: >-
+      What is the path to the Cloud Firestore collection where the extension
+      should store and update Invoices?
+    default: invoices
+    validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
+    validationErrorMessage:
+      Firestore collection paths must be an odd number of segments separated by
+      slashes, e.g. "path/to/collection".
+
+  - param: CHECKOUT_SESSIONS_COLLECTION
+    label: Checkout Sessions collection
+    required: true
+    description: >-
+      What is the path to the Cloud Firestore collection where the extension
+      should store and update Checkout Sessions? This collection path supports
+      token substitution, you can use properties from the Invoice type as tokens.
+    default: invoices/{invoiceId}/sessions
+    validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
+    validationErrorMessage:
+      Firestore collection paths must be an odd number of segments separated by
+      slashes, e.g. "path/to/collection".
+
+  - param: LIQPAY_PUBLIC_KEY
+    label: LiqPay Public Key
+    required: true
+    type: secret
+    description: >-
+      Your LiqPay public key. You can find this in your LiqPay account settings.
+      https://www.liqpay.ua/en/doc
+
+  - param: LIQPAY_PRIVATE_KEY
+    label: LiqPay Private Key
+    required: true
+    type: secret
+    description: >-
+      Your LiqPay private key. You can find this in your LiqPay account settings.
+      https://www.liqpay.ua/en/doc
+
+  - param: LIQPAY_BASE_URL
+    label: LiqPay Base URL
+    description: >-
+      The base URL for LiqPay API. By default the extension will use the 
+      following URL as the base URL: https://www.liqpay.ua/api/3
+    default: https://www.liqpay.ua/api/3
+    example: https://www.liqpay.ua/api/3
+
+  - param: WEBHOOK_URL
+    label: A URL for LiqPay to send payment status updates
+    description: >-
+      The URL LiqPay will use to send payment status updates. You can find this
+      in the extension's console logs after deployment. By default the extension
+      will use the following URL pattern: 
+      https://{LOCATION}-{PROJECT_ID}.cloudfunctions.net/ext-{EXT_INSTANCE_ID}-handlePaymentStatus
+    default: https://{LOCATION}-{PROJECT_ID}.cloudfunctions.net/ext-{EXT_INSTANCE_ID}-handlePaymentStatus
+
+  - param: HANDLE_INVOICE_PLACED_MIN_INSTANCES
+    label: Minimum instances for checkout function
+    required: true
+    description: >-
+      Set the minimum number of function instances that should be always be
+      available to start checkout. This number can be adjusted to
+      reduce cold starts and increase the responsiveness of Checkout Session
+      creation requests. Suggested values are 0 or 1. Please note this setting
+      will likely incur billing costss, see the [Firebase
+      documentation](https://firebase.google.com/docs/functions/manage-functions#reduce_the_number_of_cold_starts)
+      for more information.
+    default: 0
+
+  - param: INVOICE_TO_CHECKOUT_REQUEST_JSONATA
+    label: JSONata expression to map Invoice to LiqPay API Checkout request
+    description: >-
+        A JSONata expression to map an Invoice to a LiqPay API Checkout request.
+        The expression should return an object that matches the LiqPay API
+        Checkout request schema. The expression will be evaluated with the 
+        document you store in the Invoices collection. The document will have:
+        The expression should return an object that matches the LiqPay API
+        Checkout request schema. The default expression is:
+        ```
+        {
+          "version": 3,
+          "action": subscription.periodicity ? "subscribe" : "pay",
+          "amount": amount,
+          "currency": currency,
+          "description": description,
+          "order_id": invoiceId,
+          "subscribe": $boolean(subscription.periodicity),
+          "subscribe_date_start": subscription.start,
+          "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity)
+        }
+        ```
+    default: |
+      {
+        "version": 3,
+        "action": subscription.periodicity ? "subscribe" : "pay",
+        "amount": amount,
+        "currency": currency,
+        "description": description,
+        "order_id": invoiceId,
+        "subscribe": $boolean(subscription.periodicity),
+        "subscribe_date_start": subscription.start,
+        "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity)
+      }
+
+events:
+  - type: dev.summerhammer.firestore-liqpay-payments.v1.invoice.created
+    description: An invoice was created in the specified collection.
+  - type: dev.summerhammer.firestore-liqpay-payments.v1.invoice.updated
+    description: An invoice was updated in the specified collection.

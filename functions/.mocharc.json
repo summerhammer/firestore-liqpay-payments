@@ -1,10 +1,15 @@
 {
-  "require": "ts-node/register",
+  "require": [
+    "ts-node/register",
+    "__tests__/mocha.setup.ts"
+  ],
   "extensions": ["ts", "tsx"],
   "spec": [
-    "integration-tests/**/*.spec.*"
+    "__tests__/**/*.spec.*"
   ],
   "watch-files": [
-    "src"
-  ]
+    "src",
+    "__tests__"
+  ],
+  "timeout": 20000
 }
