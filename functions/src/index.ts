@@ -8,8 +8,11 @@ import * as logs from "./logs";
 
 import config from "./config";
 import {LiqPayError} from "./liqpay/client";
+import * as events from "./events";
 
 admin.initializeApp();
+
+events.setupEventChannel();
 
 const liqpay = createLiqPayClient({
   privateKey: config.liqpayPrivateKey,

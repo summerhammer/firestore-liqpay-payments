@@ -1,5 +1,5 @@
 name: firestore-liqpay-payments
-version: 0.0.1  # Follow semver versioning
+version: 0.1.0
 specVersion: v1beta
 
 displayName: Run Payments with LiqPay Checkout
@@ -9,7 +9,7 @@ description: >-
 
 license: Apache-2.0
 
-sourceUrl: https://github.com/rozd/firestore-liqpay-payments
+sourceUrl: https://github.com/summerhammer/firestore-liqpay-payments
 
 author:
   authorName: Summer Hammer
@@ -22,7 +22,7 @@ contributors:
 billingRequired: true
 
 externalServices:
-  - name: Stripe
+  - name: LiqPay
     pricingUri: https://www.liqpay.ua/en/tariffs
 
 roles:
@@ -120,7 +120,7 @@ params:
       Firestore collection paths must be an odd number of segments separated by
       slashes, e.g. "path/to/collection".
 
-  - param: CHECKOUT_SESSIONS_COLLECTION
+  - param: SESSIONS_COLLECTION
     label: Checkout Sessions collection
     required: true
     description: >-
@@ -215,7 +215,9 @@ params:
       }
 
 events:
-  - type: dev.summerhammer.firestore-liqpay-payments.v1.invoice.created
-    description: An invoice was created in the specified collection.
-  - type: dev.summerhammer.firestore-liqpay-payments.v1.invoice.updated
-    description: An invoice was updated in the specified collection.
+  - type: dev.summerhammer.firestore-liqpay-payments.v1.checkout-session.created
+    description: Occurs when a new checkout session is created.
+  - type: dev.summerhammer.firestore-liqpay-payments.v1.checkout-session.updated
+    description: Occurs when a checkout session is updated.
+  - type: dev.summerhammer.firestore-liqpay-payments.v1.payment-status.received
+    description: Occurs when a payment status is received from LiqPay.

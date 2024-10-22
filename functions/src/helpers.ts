@@ -6,6 +6,7 @@ import {EphemeralCheckoutRequest} from "./liqpay/dto/checkout.request";
 import jsonata from "jsonata";
 import {CHECKOUT_SESSION_CONVERTER, CheckoutSession} from "./types";
 import {LiqPayError} from "./liqpay/client";
+import * as events from "./events";
 
 // MARK: Firestore
 
@@ -31,7 +32,12 @@ export async function firestoreUpdateDatabaseWithPaymentPageURL(
 
   await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
     .withConverter(CHECKOUT_SESSION_CONVERTER)
-    .create(session)
+    .create(session);
+
+  await events.recordCheckoutSessionCreatedEvent(
+    invoiceId,
+    paymentPageURL,
+  );
 }
 
 export async function firestoreUpdateDatabaseWithFailedCheckout(
@@ -63,6 +69,12 @@ export async function firestoreUpdateDatabaseWithPaymentStatus(
   status: PaymentStatus,
 ): Promise<void> {
 
+  await events.recordPaymentStatusReceivedEvent(
+    status.order_id,
+    status.status,
+    `${status.transaction_id}`,
+  );
+
   const errorOrNull = translatePaymentStatusToCheckoutSessionError(status);
 
   const session: Partial<CheckoutSession> = {
@@ -80,6 +92,12 @@ export async function firestoreUpdateDatabaseWithPaymentStatus(
 
   await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
     .set(session, {merge: true});
+
+  await events.recordCheckoutSessionUpdatedEvent(
+    status.order_id,
+    session.status!,
+    session.transactionId!,
+  );
 
   await db.collection(`${config.invoicesCollection}/${invoiceId}/statuses`)
     .add(status);
