@@ -1,11 +1,15 @@
 name: firestore-liqpay-payments
-version: 0.1.0
+version: 0.1.1
 specVersion: v1beta
 
-displayName: Run Payments with LiqPay Checkout
+displayName: LiqPay Checkout for Firestore
 
-description: >-
-  Sends the world a greeting.
+description: >
+  Integrates LiqPay Checkout for seamless payment processing.
+
+icon: icon.png
+
+tags: [payments]
 
 license: Apache-2.0
 
@@ -27,15 +31,15 @@ externalServices:
 
 roles:
   - role: datastore.user
-    reason: >-
-      Allows the extension to store payment status updates in Cloud
-      Firestore.
+    reason: >
+      Enables the extension to store and update payment status in Cloud 
+      Firestore.  
 
 resources:
   - name: handleInvoicePlaced
     type: firebaseextensions.v1beta.function
-    description: >-
-      Initiates a payment with LiqPay Checkout.
+    description: >
+      Initiates the payment process through LiqPay Checkout.
     properties:
       location: ${LOCATION}
       runtime: nodejs18
@@ -45,8 +49,8 @@ resources:
 
   - name: handlePaymentStatus
     type: firebaseextensions.v1beta.function
-    description: >-
-      Handles LiqPay webhook events to keep payment statuses in sync.
+    description: >
+      Handles LiqPay webhook events to keep payment statuses updated.
     properties:
       location: ${LOCATION}
       runtime: nodejs18
@@ -54,12 +58,12 @@ resources:
 
 params:
   - param: LOCATION
-    label: Cloud Functions deployment location
-    description: >-
-      Where do you want to deploy the functions created for this extension? You
-      usually want a location close to your database. For help selecting a
-      location, refer to the [location selection
-      guide](https://firebase.google.com/docs/functions/locations).
+    label: Cloud Functions Deployment Location
+    description: >
+      Where would you like to deploy the functions created for this extension? 
+      Typically, choose a location close to your database. Refer to the 
+      [location selection guide](https://firebase.google.com/docs/functions/locations) 
+      for assistance.
     type: select
     options:
       - label: Iowa (us-central1)
@@ -109,99 +113,79 @@ params:
     immutable: true
 
   - param: INVOICES_COLLECTION
-    label: Invoices collection
+    label: Invoices Collection
     required: true
-    description: >-
-      What is the path to the Cloud Firestore collection where the extension
-      should store and update Invoices?
+    description: >
+      Specify the Firestore collection where the extension will store and update 
+      invoices.
     default: invoices
     validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
     validationErrorMessage:
-      Firestore collection paths must be an odd number of segments separated by
-      slashes, e.g. "path/to/collection".
+      Collection paths must have an odd number of segments separated by slashes, such as "path/to/collection".
 
   - param: SESSIONS_COLLECTION
-    label: Checkout Sessions collection
+    label: Checkout Sessions Collection
     required: true
-    description: >-
-      What is the path to the Cloud Firestore collection where the extension
-      should store and update Checkout Sessions? This collection path supports
-      token substitution, you can use properties from the Invoice type as tokens.
-    default: invoices/{invoiceId}/sessions
+    description: >
+      Specify the Firestore collection path for storing and updating Checkout 
+      Sessions. This path supports token substitution from Invoice fields. 
+      For example, setting this to "customers/{customerId}/sessions" will store 
+      sessions under "customers/customer123/sessions/{id}" if the `Invoice` has 
+      a `customerId` field with value "customer123".
+    default: checkout-sessions
     validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
     validationErrorMessage:
-      Firestore collection paths must be an odd number of segments separated by
-      slashes, e.g. "path/to/collection".
+      Collection paths must have an odd number of segments separated by slashes, such as "path/to/collection".
 
   - param: LIQPAY_PUBLIC_KEY
     label: LiqPay Public Key
     required: true
     type: secret
-    description: >-
-      Your LiqPay public key. You can find this in your LiqPay account settings.
-      https://www.liqpay.ua/en/doc
+    description: >
+      Your LiqPay public key, available in your LiqPay account settings.  
+      [More info](https://www.liqpay.ua/en/doc).  
 
   - param: LIQPAY_PRIVATE_KEY
     label: LiqPay Private Key
     required: true
     type: secret
-    description: >-
-      Your LiqPay private key. You can find this in your LiqPay account settings.
-      https://www.liqpay.ua/en/doc
+    description: >
+      Your LiqPay private key, available in your LiqPay account settings.  
+      [More info](https://www.liqpay.ua/en/doc).  
 
   - param: LIQPAY_BASE_URL
     label: LiqPay Base URL
-    description: >-
-      The base URL for LiqPay API. By default the extension will use the 
-      following URL as the base URL: https://www.liqpay.ua/api/3
-    default: https://www.liqpay.ua/api/3
-    example: https://www.liqpay.ua/api/3
+    description: >
+      The base URL for the LiqPay API. The default is: https://www.liqpay.ua/api
+    default: https://www.liqpay.ua/api
 
   - param: WEBHOOK_URL
-    label: A URL for LiqPay to send payment status updates
-    description: >-
-      The URL LiqPay will use to send payment status updates. You can find this
-      in the extension's console logs after deployment. By default the extension
-      will use the following URL pattern: 
-      https://{LOCATION}-{PROJECT_ID}.cloudfunctions.net/ext-{EXT_INSTANCE_ID}-handlePaymentStatus
+    label: Webhook URL for LiqPay Payment Status Updates
+    description: >
+      The URL where LiqPay will send payment status updates. This URL supports 
+      token substitution from the `process.env`. The default URL format is:  
+      `https://{LOCATION}-{PROJECT_ID}.cloudfunctions.net/ext-{EXT_INSTANCE_ID}-handlePaymentStatus`
     default: https://{LOCATION}-{PROJECT_ID}.cloudfunctions.net/ext-{EXT_INSTANCE_ID}-handlePaymentStatus
 
   - param: HANDLE_INVOICE_PLACED_MIN_INSTANCES
-    label: Minimum instances for checkout function
+    label: Minimum Function Instances for Checkout
     required: true
-    description: >-
-      Set the minimum number of function instances that should be always be
-      available to start checkout. This number can be adjusted to
-      reduce cold starts and increase the responsiveness of Checkout Session
-      creation requests. Suggested values are 0 or 1. Please note this setting
-      will likely incur billing costss, see the [Firebase
-      documentation](https://firebase.google.com/docs/functions/manage-functions#reduce_the_number_of_cold_starts)
+    description: >
+      Set the minimum number of function instances for initiating checkout 
+      sessions. Increasing the number can reduce cold starts and improve 
+      responsiveness. Suggested values: 0 or 1. Note: Higher values may incur 
+      additional costs. Refer to [Firebase documentation](https://firebase.google.com/docs/functions/manage-functions#reduce_the_number_of_cold_starts) 
       for more information.
     default: 0
 
   - param: INVOICE_TO_CHECKOUT_REQUEST_JSONATA
-    label: JSONata expression to map Invoice to LiqPay API Checkout request
-    description: >-
-        A JSONata expression to map an Invoice to a LiqPay API Checkout request.
-        The expression should return an object that matches the LiqPay API
-        Checkout request schema. The expression will be evaluated with the 
-        document you store in the Invoices collection. The document will have:
-        The expression should return an object that matches the LiqPay API
-        Checkout request schema. The default expression is:
-        ```
-        {
-          "version": 3,
-          "action": subscription.periodicity ? "subscribe" : "pay",
-          "amount": amount,
-          "currency": currency,
-          "description": description,
-          "order_id": invoiceId,
-          "subscribe": $boolean(subscription.periodicity),
-          "subscribe_date_start": subscription.start,
-          "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity)
-        }
-        ```
-    default: |
+    label: JSONata Expression to Map Invoice to LiqPay Checkout Request
+    description: >
+      A [JSONata](https://jsonata.org/) expression to map an Invoice document to 
+      a LiqPay API Checkout request. The result must match the LiqPay API 
+      Checkout schema. The document will have Invoice data available for 
+      transformation. Default expression:
+      ```
       {
         "version": 3,
         "action": subscription.periodicity ? "subscribe" : "pay",
@@ -213,11 +197,15 @@ params:
         "subscribe_date_start": subscription.start,
         "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity)
       }
+      ```
+      **Note:** make sure this line has no line breaks, multiline string as the
+      parameter value could cause an error.
+    default: { "version": 3, "action": subscription.periodicity ? "subscribe" : "pay", "amount": amount, "currency": currency, "description": description, "order_id": invoiceId, "subscribe": $boolean(subscription.periodicity), "subscribe_date_start": subscription.start, "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity) }
 
 events:
   - type: dev.summerhammer.firestore-liqpay-payments.v1.checkout-session.created
-    description: Occurs when a new checkout session is created.
+    description: Triggered when a new checkout session is created.
   - type: dev.summerhammer.firestore-liqpay-payments.v1.checkout-session.updated
-    description: Occurs when a checkout session is updated.
+    description: Triggered when a checkout session is updated.
   - type: dev.summerhammer.firestore-liqpay-payments.v1.payment-status.received
-    description: Occurs when a payment status is received from LiqPay.
+    description: Triggered when a payment status is received from LiqPay.

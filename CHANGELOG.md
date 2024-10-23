@@ -1,2 +1,6 @@
+## Version 0.1.1
+- Removes line breaks from the `INVOICE_TO_CHECKOUT_REQUEST_JSONATA` default expression
+- Adds an icon and updates documentation
+
 ## Version 0.1.0
 - Initial release of the extension
