@@ -1,2 +1,2 @@
-## Version 0.0.1
-- Initial Version
+## Version 0.1.0
+- Initial release of the extension
