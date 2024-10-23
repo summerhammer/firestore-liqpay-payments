@@ -184,3 +184,7 @@ INFO: Connected to new websocket client
 [debug] [2024-10-22T23:29:28.484Z] Oct 23, 2024 2:29:28 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel
 INFO: Connected to new websocket client
  {"metadata":{"emulator":{"name":"firestore"},"message":"Oct 23, 2024 2:29:28 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel\nINFO: Connected to new websocket client\n"}}
+[debug] [2024-10-22T23:59:40.488Z] File /Users/max/dev/rozd/liqpay-firebase-extension/functions/package.json changed, reloading triggers {"metadata":{"emulator":{"name":"functions"},"message":"File /Users/max/dev/rozd/liqpay-firebase-extension/functions/package.json changed, reloading triggers"}}
+[info] ✔  functions: Loaded functions definitions from source: handleInvoicePlaced, handlePaymentStatus. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: handleInvoicePlaced, handlePaymentStatus."}}
+[debug] [2024-10-23T00:00:44.213Z] File /Users/max/dev/rozd/liqpay-firebase-extension/functions/package-lock.json changed, reloading triggers {"metadata":{"emulator":{"name":"functions"},"message":"File /Users/max/dev/rozd/liqpay-firebase-extension/functions/package-lock.json changed, reloading triggers"}}
+[info] ✔  functions: Loaded functions definitions from source: handleInvoicePlaced, handlePaymentStatus. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: handleInvoicePlaced, handlePaymentStatus."}}
