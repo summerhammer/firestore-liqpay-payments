@@ -180,7 +180,7 @@ params:
 
   - param: INVOICE_TO_CHECKOUT_REQUEST_JSONATA
     label: JSONata Expression to Map Invoice to LiqPay Checkout Request
-    description: >
+    description: |
       A [JSONata](https://jsonata.org/) expression to map an Invoice document to 
       a LiqPay API Checkout request. The result must match the LiqPay API 
       Checkout schema. The document will have Invoice data available for 
@@ -200,7 +200,18 @@ params:
       ```
       **Note:** make sure this line has no line breaks, multiline string as the
       parameter value could cause an error.
-    default: { "version": 3, "action": subscription.periodicity ? "subscribe" : "pay", "amount": amount, "currency": currency, "description": description, "order_id": invoiceId, "subscribe": $boolean(subscription.periodicity), "subscribe_date_start": subscription.start, "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity) }
+    default: >-
+      {
+        "version": 3,
+        "action": subscription.periodicity ? "subscribe" : "pay",
+        "amount": amount,
+        "currency": currency,
+        "description": description,
+        "order_id": invoiceId,
+        "subscribe": $boolean(subscription.periodicity),
+        "subscribe_date_start": subscription.start,
+        "subscribe_periodicity": $lookup({"annually": "year", "monthly": "month", "weekly": "week", "daily": "day"}, subscription.periodicity)
+      }
 
 events:
   - type: dev.summerhammer.firestore-liqpay-payments.v1.checkout-session.created
