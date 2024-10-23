@@ -31,8 +31,14 @@ function encodeRequest(request: Record<any, any>): string {
 }
 
 export async function webhookExposeEndpoints(): Promise<Tunnel> {
-  return await localtunnel({
+  console.log("LocalTunnel: Exposing webhook endpoints...");
+  const tunnel = await localtunnel({
     subdomain: "firestore-liqpay-payments",
     port: 9001,
   });
+  console.log("LocalTunnel: Exposed webhook endpoints at", tunnel.url);
+  tunnel.on("close", () => {
+    console.log("LocalTunnel: Closed");
+  });
+  return tunnel;
 }

@@ -1,3 +1,6 @@
+## Version 0.1.2
+- Updates [README.md](README.md) with the **Development Notes** section
+
 ## Version 0.1.1
 - Removes line breaks from the `INVOICE_TO_CHECKOUT_REQUEST_JSONATA` default expression
 - Adds an icon and updates documentation
