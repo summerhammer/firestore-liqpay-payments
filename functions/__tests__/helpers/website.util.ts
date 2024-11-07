@@ -39,6 +39,12 @@ export async function submit(
     const sendButton = await page.$("div[el=\"Send\"]");
     await sendButton!.click();
 
+    console.log("Waiting for the checkout form to submit...");
+
+    await page.waitForSelector("div.container__block__confirm__success__text", {
+      timeout: 10000,
+    });
+
     console.log("Closing the browser...");
     await browser.close();
     console.log("Browser closed.");

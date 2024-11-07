@@ -14,7 +14,7 @@ firebaseInitializeAppIfNeeded();
 
 const firestore = admin.firestore();
 
-describe("checkout", () => {
+describe("checkout", async () => {
   let tunnel: Tunnel;
 
   before(async () => {

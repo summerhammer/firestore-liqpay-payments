@@ -1,3 +1,6 @@
+## Version 0.2.0
+- Adds Node.js Client for seamless integration with the extension from Firebase Cloud Functions app
+
 ## Version 0.1.2
 - Updates [README.md](README.md) with the **Development Notes** section
 
