@@ -4,6 +4,7 @@ import { CHECKOUT_SESSION_CONVERTER, CheckoutSession } from "./session";
 import { FirestoreLiqPayError } from "./errors";
 import DocumentReference = firestore.DocumentReference;
 import DocumentSnapshot = firestore.DocumentSnapshot;
+import {utilReplaceTokensInString} from "./utils";
 
 /**
  * Default timeout for waiting for a payment to be created.
@@ -78,17 +79,24 @@ export class PaymentsClient {
    * was successful, or an `error` object if the request failed.
    */
   async placeInvoice(
-    invoice: any,
+    invoice: Record<any, any>,
     options?: PlaceInvoiceOptions,
   ): Promise<CheckoutSession> {
     const db = admin.firestore();
 
-    const ref: DocumentReference = await db
-      .collection(this.options.invoicesCollection)
-      .add(invoice);
+    let ref: DocumentReference;
+    try {
+      ref = await db.collection(this.options.invoicesCollection).add(invoice);
+    } catch (err) {
+      throw new FirestoreLiqPayError(
+        "internal",
+        "Error placing invoice in Firestore",
+        err,
+      );
+    }
 
     return this.waitForCheckoutSessionWithPaymentPageURL(
-      ref,
+      db.doc(this.configResolveCheckoutSessionDocumentPath(invoice, ref.id)),
       this.getTimeoutInMilliseconds(options?.timeoutInMilliseconds),
     );
   }
@@ -159,5 +167,15 @@ export class PaymentsClient {
       );
     }
     return timeout;
+  }
+
+  private configResolveCheckoutSessionDocumentPath(
+    invoice: Record<any, any>,
+    invoiceId: string,
+  ): string {
+    const collection = utilReplaceTokensInString(this.options.sessionsCollection, {
+      ...Object.fromEntries(Object.entries(invoice).map(([key, value]) => [key, value?.toString()])),
+    });
+    return `${collection}/${invoiceId}`;
   }
 }

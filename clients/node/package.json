@@ -1,6 +1,6 @@
 {
   "name": "firestore-liqpay-node-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Node.js client for the firestore-liqpay-payments Firebase Extension",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

@@ -1,8 +1,6 @@
 import * as admin from "firebase-admin";
-import {firestore} from "firebase-admin";
 import * as chai from "chai";
 import {expect} from "chai";
-import chaiAsPromised = require("chai-as-promised");
 import * as sinon from "sinon";
 import {
   FirestoreLiqPayError,
@@ -10,18 +8,19 @@ import {
   PaymentsClientOptions
 } from "../src";
 import {DEFAULT_PAYMENTS_TIMEOUT_IN_MILLISECONDS} from "../src/payments";
-import DocumentReference = firestore.DocumentReference;
+import {createDocumentReference} from "./helpers/firestore.util";
+import chaiAsPromised = require("chai-as-promised");
 
 chai.use(chaiAsPromised);
 
 describe("PaymentsClient", () => {
   const options: PaymentsClientOptions = {
     invoicesCollection: "invoices",
-    sessionsCollection: "checkout-sessions",
+    sessionsCollection: "users/{userId}/checkout-sessions",
     timeoutInMilliseconds: 30000,
   };
 
-  const invoice = { amount: 100, currency: "USD" };
+  const invoice = { amount: 100, currency: "USD", userId: "user123" };
   let client: PaymentsClient;
   let sandbox: sinon.SinonSandbox;
 
@@ -35,21 +34,22 @@ describe("PaymentsClient", () => {
   });
 
   it("places an invoice and returns a CheckoutSession with paymentPageURL", async () => {
-    const mockRef = {
-      withConverter: sinon.stub().returnsThis(),
-      onSnapshot: sinon.stub().callsFake((onNext) => {
-        onNext({
-          data: () => ({
-            paymentPageURL: "https://example.com",
-          }),
-        });
-        return () => {};
-      }),
-    } as unknown as DocumentReference;
 
-    sandbox.stub(admin.firestore(), "collection").returns({
-      add: sinon.stub().resolves(mockRef),
-    } as any);
+    sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
+      if (collectionPath === options.invoicesCollection) {
+        return {
+          add: sinon.stub().resolves({id: "invoice123"}),
+        } as any;
+      }
+      throw new Error(`Unexpected collection path: ${collectionPath}`);
+    });
+
+    sandbox.stub(admin.firestore(), "doc").callsFake((path: string) => {
+      if (path === `users/${invoice.userId}/checkout-sessions/invoice123`) {
+        return createDocumentReference({ data: { paymentPageURL: "https://example.com" } });
+      }
+      throw new Error(`Unexpected document path: ${path}`);
+    });
 
     const result = await client.placeInvoice(invoice);
 
@@ -57,37 +57,60 @@ describe("PaymentsClient", () => {
   });
 
   it("throws timeout error if CheckoutSession is not created within timeout", async () => {
-    const mockRef = {
-      withConverter: sinon.stub().returnsThis(),
-      onSnapshot: sinon.stub().returns(() => {}),
-    } as unknown as DocumentReference;
 
-    sandbox.stub(admin.firestore(), "collection").returns({
-      add: sinon.stub().resolves(mockRef),
-    } as any);
+    sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
+      if (collectionPath === options.invoicesCollection) {
+        return {
+          add: sinon.stub().resolves({id: "invoice123"}),
+        } as any;
+      }
+      throw new Error(`Unexpected collection path: ${collectionPath}`);
+    });
 
-    expect(client.placeInvoice(invoice, { timeoutInMilliseconds: 1 })).to.be.rejectedWith(
+    await expect(client.placeInvoice(invoice, { timeoutInMilliseconds: 1 })).to.be.rejectedWith(
       FirestoreLiqPayError,
       "Timeout waiting for checkout session to be created"
     );
   });
 
   it("throws internal error if Firestore onSnapshot fails", async () => {
-    const mockRef = {
-      withConverter: sinon.stub().returnsThis(),
-      onSnapshot: sinon.stub().callsFake((_, onError) => {
-        onError(new Error("Firestore error"));
-        return () => {};
-      }),
-    } as unknown as DocumentReference;
+    sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
+      if (collectionPath === options.invoicesCollection) {
+        return {
+          add: sinon.stub().resolves({id: "invoice123"}),
+        } as any;
+      }
+      throw new Error(`Unexpected collection path: ${collectionPath}`);
+    });
 
-    sandbox.stub(admin.firestore(), "collection").returns({
-      add: sinon.stub().resolves(mockRef),
-    } as any);
+    sandbox.stub(admin.firestore(), "doc").callsFake((path: string) => {
+      if (path === `users/${invoice.userId}/checkout-sessions/invoice123`) {
+        return createDocumentReference({
+          error: new Error("Firestore error"),
+        });
+      }
+      throw new Error(`Unexpected document path: ${path}`);
+    });
 
-    expect(client.placeInvoice(invoice)).to.be.rejectedWith(
+    await expect(client.placeInvoice(invoice)).to.be.rejectedWith(
       FirestoreLiqPayError,
       "Error waiting for checkout session to be created"
+    );
+  });
+
+  it("throws internal error if Firestore add fails", async () => {
+    sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
+      if (collectionPath === options.invoicesCollection) {
+        return {
+          add: sinon.stub().rejects(new Error("Firestore error")),
+        } as any;
+      }
+      throw new Error(`Unexpected collection path: ${collectionPath}`);
+    });
+
+    await expect(client.placeInvoice(invoice)).to.be.rejectedWith(
+      FirestoreLiqPayError,
+      "Error placing invoice in Firestore"
     );
   });
 

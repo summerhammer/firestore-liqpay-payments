@@ -1,9 +1,7 @@
-import {DocumentData, QueryDocumentSnapshot} from "firebase-admin/firestore";
 import {expect} from "chai";
 import {CheckoutSession} from "../src";
 import {CHECKOUT_SESSION_CONVERTER} from "../src/session";
-import {firestore} from "firebase-admin";
-import Timestamp = firestore.Timestamp;
+import {createMockSnapshot} from "./helpers/firestore.util";
 
 describe("CHECKOUT_SESSION_CONVERTER", () => {
   it("converts CheckoutSession to Firestore DocumentData correctly", () => {
@@ -87,19 +85,3 @@ describe("CHECKOUT_SESSION_CONVERTER", () => {
   });
 });
 
-function createMockSnapshot(
-  data: DocumentData & {createdAt: Date, updatedAt: Date},
-): QueryDocumentSnapshot {
-  return {
-    createTime: Timestamp.fromDate(data.createdAt),
-    updateTime: Timestamp.fromDate(data.updatedAt),
-    exists: true,
-    ref: {} as any, // Mock reference, replace with actual if needed
-    id: "mockId",
-    readTime: Timestamp.fromDate(new Date("2023-10-02T00:00:00Z")),
-    size: 0,
-    data: () => data,
-    get: (field: string) => data[field],
-    isEqual: () => false,
-  } as QueryDocumentSnapshot;
-}
