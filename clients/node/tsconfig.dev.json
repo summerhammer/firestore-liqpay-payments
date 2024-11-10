@@ -1,0 +1,9 @@
+{
+  "include": [
+    ".eslintrc.js",
+    "__tests__"
+  ],
+  "compilerOptions": {
+    "esModuleInterop": true
+  }
+}
