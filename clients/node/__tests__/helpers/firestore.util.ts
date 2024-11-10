@@ -31,6 +31,12 @@ export function createDocumentReference(params: {
   return {
     id: "mockId",
     withConverter: sinon.stub().returnsThis(),
+    get: sinon.stub().callsFake(() => {
+      return Promise.resolve({
+        data: () => params.data,
+        exists: params.data !== undefined,
+      });
+    }),
     onSnapshot: sinon.stub().callsFake((onNext, onError) => {
       if (params.error) {
         onError(params.error);

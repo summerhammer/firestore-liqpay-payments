@@ -3,6 +3,7 @@ import * as chai from "chai";
 import {expect} from "chai";
 import * as sinon from "sinon";
 import {
+  CheckoutSession,
   FirestoreLiqPayError,
   PaymentsClient,
   PaymentsClientOptions
@@ -34,7 +35,6 @@ describe("PaymentsClient", () => {
   });
 
   it("places an invoice and returns a CheckoutSession with paymentPageURL", async () => {
-
     sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
       if (collectionPath === options.invoicesCollection) {
         return {
@@ -57,7 +57,6 @@ describe("PaymentsClient", () => {
   });
 
   it("throws timeout error if CheckoutSession is not created within timeout", async () => {
-
     sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
       if (collectionPath === options.invoicesCollection) {
         return {
@@ -112,6 +111,87 @@ describe("PaymentsClient", () => {
       FirestoreLiqPayError,
       "Error placing invoice in Firestore"
     );
+  });
+
+  it("fetches a checkout session", async () => {
+    sandbox.stub(admin.firestore(), "doc").callsFake((path: string) => {
+      if (path === `users/${invoice.userId}/checkout-sessions/invoice123`) {
+        return createDocumentReference({ data: { paymentPageURL: "https://example.com" } });
+      }
+      throw new Error(`Unexpected document path: ${path}`);
+    });
+
+    const result = await client.fetchCheckoutSession("invoice123", { userId: "user123" });
+
+    expect(result.paymentPageURL).to.equal("https://example.com");
+  });
+
+  it("cancels a checkout session", async () => {
+    const updateStub = sinon.stub().resolves();
+
+    sandbox.stub(admin.firestore(), "doc").callsFake((path: string) => {
+      if (path === `users/${invoice.userId}/checkout-sessions/invoice123`) {
+        return { update: updateStub } as any;
+      }
+      throw new Error(`Unexpected document path: ${path}`);
+    });
+
+    await client.cancelCheckoutSession("invoice123", { userId: "user123" });
+
+    expect(updateStub.calledOnceWith({ status: "cancelled" })).to.be.true;
+  });
+
+  it("finds checkout sessions with a specific status", async () => {
+    const sessions = [
+      { paymentPageURL: "https://example.com" },
+      { paymentPageURL: "https://example2.com" },
+    ];
+
+    sandbox.stub(admin.firestore(), "collection").callsFake((collectionPath: string) => {
+      if (collectionPath === `users/${invoice.userId}/checkout-sessions`) {
+        return {
+          where: sinon.stub().returnsThis(),
+          withConverter: sinon.stub().returnsThis(),
+          get: sinon.stub().resolves({
+            docs: sessions.map((session) => ({ data: () => session })),
+          }),
+        } as any;
+      }
+      throw new Error(`Unexpected collection path: ${collectionPath}`);
+    });
+
+    const result = await client.findCheckoutSessionsWithStatus("pending", { userId: "user123" });
+
+    expect(result).to.deep.equal(sessions);
+  });
+
+  it("finds pending checkout sessions", async () => {
+    const sessions: CheckoutSession[] = [
+      {
+        status: "pending",
+        invoiceId: "invoice123",
+        error: null,
+        transactionId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        paymentPageURL: "https://example.com"
+      },
+      {
+        status: "pending",
+        invoiceId: "invoice321",
+        error: null,
+        transactionId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        paymentPageURL: "https://example2.com"
+      },
+    ];
+
+    sandbox.stub(client, "findCheckoutSessionsWithStatus").resolves(sessions);
+
+    const result = await client.findPendingCheckoutSessions({ userId: "user123" });
+
+    expect(result).to.deep.equal(sessions);
   });
 
   it("returns default timeout if no timeout is provided", () => {

@@ -4,6 +4,7 @@
 export type FirestoreLiqPayErrorCode =
   | "timeout"
   | "invalid-argument"
+  | "not-found"
   | "internal";
 
 /**

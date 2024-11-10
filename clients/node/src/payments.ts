@@ -149,6 +149,71 @@ export class PaymentsClient {
   }
 
   /**
+   * Fetches a `CheckoutSession` document from Firestore.
+   * @param invoiceId The ID of the invoice.
+   * @param tokens Optional tokens to replace in the collection path.
+   */
+  async fetchCheckoutSession(
+    invoiceId: string,
+    tokens?: Record<any, any>,
+  ): Promise<CheckoutSession> {
+    const db = admin.firestore();
+    const path = this.configResolveCheckoutSessionDocumentPath(tokens ?? {}, invoiceId);
+    const snp = await db.doc(path).get();
+    if (!snp.exists) {
+      throw new FirestoreLiqPayError(
+        "not-found",
+        `Checkout session document not found: ${path}`,
+      );
+    }
+    return snp.data() as CheckoutSession;
+  }
+
+  /**
+   * Cancels a `CheckoutSession` document in Firestore.
+   * @param invoiceId The ID of the invoice.
+   * @param tokens Optional tokens to replace in the collection path.
+   */
+  async cancelCheckoutSession(
+    invoiceId: string,
+    tokens?: Record<any, any>,
+  ): Promise<void> {
+    const db = admin.firestore();
+    const path = this.configResolveCheckoutSessionDocumentPath(tokens ?? {}, invoiceId);
+    await db.doc(path).update({
+      status: "cancelled",
+    });
+  }
+
+  /**
+   * Finds `CheckoutSession` documents in Firestore with a specific status.
+   * @param status The status to filter by.
+   * @param tokens Optional tokens to replace in the collection path.
+   */
+  async findCheckoutSessionsWithStatus(
+    status: "pending" | "cancelled" | "success" | "failure",
+    tokens?: Record<any, any>,
+  ): Promise<CheckoutSession[]> {
+    const db = admin.firestore();
+    const collection = utilReplaceTokensInString(this.options.sessionsCollection, tokens ?? {});
+    const query = db.collection(collection)
+      .where("status", "==", status)
+      .withConverter(CHECKOUT_SESSION_CONVERTER);
+    const snp = await query.get();
+    return snp.docs.map((doc) => doc.data());
+  }
+
+  /**
+   * Finds `CheckoutSession` documents in Firestore with a status of "pending".
+   * @param tokens Optional tokens to replace in the collection path.
+   */
+  async findPendingCheckoutSessions(
+    tokens?: Record<any, any>,
+  ): Promise<CheckoutSession[]> {
+    return this.findCheckoutSessionsWithStatus("pending", tokens);
+  }
+
+  /**
    * Returns the timeout in milliseconds for waiting for a payment to be created.
    * @param timeout
    * @private
