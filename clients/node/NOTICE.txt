@@ -1,0 +1,5 @@
+Firestore LiqPay Node.js Client
+Copyright 2024 Max Rozdobudko
+
+This product includes software developed at
+Google Firebase (https://firebase.google.com/).
