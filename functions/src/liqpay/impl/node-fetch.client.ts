@@ -3,6 +3,7 @@ import {EphemeralPaymentStatusRequest} from "../dto/payment-status.request";
 import {PaymentStatus,} from "../dto/payment-status.response";
 import {LiqPayCrypto} from "../crypto/liq-pay-crypto";
 import {LiqPayClient, LiqPayClientConfig, LiqPayError} from "../client";
+import {error, log} from "firebase-functions/logger";
 
 export class NodeFetchLiqPayClient implements LiqPayClient {
 
@@ -20,7 +21,7 @@ export class NodeFetchLiqPayClient implements LiqPayClient {
   async checkout(
     request: EphemeralCheckoutRequest,
   ): Promise<string> {
-    console.log(`LiqPay: checkout request: ${JSON.stringify(request)}`);
+    log(`LiqPay: checkout request: ${JSON.stringify(request)}`);
     const response = await fetch(`${this.baseURL}/3/checkout`, {
       method: "POST",
       body: this.encodeRequest({...request, public_key: this.publicKey}),
@@ -42,6 +43,7 @@ export class NodeFetchLiqPayClient implements LiqPayClient {
       }
       return location;
     } else {
+      error(`LiqPay: checkout response: ${JSON.stringify(response)}`);
       throw new LiqPayError(
         await response.text(),
         `HTTP_${response.status}`,
@@ -54,7 +56,7 @@ export class NodeFetchLiqPayClient implements LiqPayClient {
   async getPaymentStatus(
     request: EphemeralPaymentStatusRequest,
   ): Promise<PaymentStatus> {
-    console.log(`LiqPay: getPaymentStatus request: ${JSON.stringify(request)}`);
+    log(`LiqPay: getPaymentStatus request: ${JSON.stringify(request)}`);
     const response = await fetch(`${this.baseURL}/request`, {
       method: "POST",
       body: this.encodeRequest({...request, public_key: this.publicKey}),

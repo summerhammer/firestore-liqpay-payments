@@ -1,10 +1,9 @@
 import * as admin from "firebase-admin";
-import { firestore } from "firebase-admin";
-import { CHECKOUT_SESSION_CONVERTER, CheckoutSession } from "./session";
-import { FirestoreLiqPayError } from "./errors";
-import DocumentReference = firestore.DocumentReference;
-import DocumentSnapshot = firestore.DocumentSnapshot;
+import {firestore} from "firebase-admin";
+import {CHECKOUT_SESSION_CONVERTER, CheckoutSession} from "./session";
+import {FirestoreLiqPayError} from "./errors";
 import {utilReplaceTokensInString} from "./utils";
+import DocumentSnapshot = firestore.DocumentSnapshot;
 
 /**
  * Default timeout for waiting for a payment to be created.
@@ -43,9 +42,13 @@ export interface PaymentsClientOptions {
 }
 
 /**
- * Options for placing an invoice method.
+ * Options for waiting for a checkout session method.
  */
-export interface PlaceInvoiceOptions {
+export interface WaitForCheckoutSessionOptions {
+  /**
+   * The timeout in milliseconds for waiting for a `CheckoutSession` with
+   * filled `paymentPageURL` field to be created.
+   */
   timeoutInMilliseconds?: number;
 }
 
@@ -72,21 +75,21 @@ export class PaymentsClient {
    * will translate it to a LiqPay Checkout request using the rules defined in
    * the `INVOICE_TO_CHECKOUT_REQUEST_JSONATA` extension's parameter.
    *
-   * @param options Options for placing the invoice.
-   *
-   * @returns A promise that resolves with a `CheckoutSession` object.
-   * The object will contain the `paymentPageURL` field if the checkout request
-   * was successful, or an `error` object if the request failed.
+   * @returns A promise that resolves when the id of the invoice is created.
    */
   async placeInvoice(
-    invoice: Record<any, any>,
-    options?: PlaceInvoiceOptions,
-  ): Promise<CheckoutSession> {
+    invoice: Record<string, any>,
+  ): Promise<string> {
     const db = admin.firestore();
 
-    let ref: DocumentReference;
     try {
-      ref = await db.collection(this.options.invoicesCollection).add(invoice);
+      if (invoice.hasOwnProperty("id")) {
+        await db.collection(this.options.invoicesCollection).doc(invoice.id).set(invoice);
+        return invoice.id;
+      } else {
+        const ref = await db.collection(this.options.invoicesCollection).add(invoice);
+        return ref.id;
+      }
     } catch (err) {
       throw new FirestoreLiqPayError(
         "internal",
@@ -94,24 +97,29 @@ export class PaymentsClient {
         err,
       );
     }
-
-    return this.waitForCheckoutSessionWithPaymentPageURL(
-      db.doc(this.configResolveCheckoutSessionDocumentPath(invoice, ref.id)),
-      this.getTimeoutInMilliseconds(options?.timeoutInMilliseconds),
-    );
   }
 
   /**
    * Waits for a `CheckoutSession` document to be created in Firestore with a
-   * @param ref The reference to the `CheckoutSession` document.
-   * @param timeoutInMilliseconds The timeout in milliseconds to wait for the
-   * `CheckoutSession` document to be created.
-   * @private
+   * `paymentPageURL` field. This method will listen for changes to the
+   * `CheckoutSession` document in Firestore and resolve when the `paymentPageURL`
+   * or an error is set.
+   * @param invoiceId The ID of the invoice.
+   * @param tokens Optional tokens to replace in the collection path.
+   * @param options Options for waiting for the checkout session.
+   *
+   * @returns A promise that resolves with a `CheckoutSession` object.
+   * The object will contain the `paymentPageURL` field if the checkout request
+   * was successful, or an `error` object if the request failed.
    */
-  private async waitForCheckoutSessionWithPaymentPageURL(
-    ref: DocumentReference,
-    timeoutInMilliseconds: number,
+  async waitForCheckoutSession(
+    invoiceId: string,
+    tokens?: Record<string, any>,
+    options?: WaitForCheckoutSessionOptions,
   ): Promise<CheckoutSession> {
+    const db = admin.firestore();
+    const path = this.configResolveCheckoutSessionDocumentPath(tokens ?? {}, invoiceId);
+    const ref = db.doc(path);
     let cancel: () => void = () => {};
     try {
       return await new Promise<CheckoutSession>((resolve, reject) => {
@@ -122,13 +130,22 @@ export class PaymentsClient {
               "Timeout waiting for checkout session to be created",
             ),
           );
-        }, timeoutInMilliseconds);
+        }, this.getTimeoutInMilliseconds(options?.timeoutInMilliseconds));
         cancel = ref.withConverter(CHECKOUT_SESSION_CONVERTER).onSnapshot(
           (snap: DocumentSnapshot<CheckoutSession>) => {
             const session: CheckoutSession | undefined = snap.data();
             if (session && session.paymentPageURL) {
               clearTimeout(timeout);
               resolve(session);
+            } else if (session && session.error) {
+              clearTimeout(timeout);
+              reject(
+                new FirestoreLiqPayError(
+                  "internal",
+                  `Error placing invoice in LiqPay. ${session.error.code}: ${session.error.message}`,
+                  session.error,
+                ),
+              );
             }
           },
           (err: Error) => {
@@ -155,7 +172,7 @@ export class PaymentsClient {
    */
   async fetchCheckoutSession(
     invoiceId: string,
-    tokens?: Record<any, any>,
+    tokens?: Record<string, any>,
   ): Promise<CheckoutSession> {
     const db = admin.firestore();
     const path = this.configResolveCheckoutSessionDocumentPath(tokens ?? {}, invoiceId);
@@ -176,7 +193,7 @@ export class PaymentsClient {
    */
   async cancelCheckoutSession(
     invoiceId: string,
-    tokens?: Record<any, any>,
+    tokens?: Record<string, any>,
   ): Promise<void> {
     const db = admin.firestore();
     const path = this.configResolveCheckoutSessionDocumentPath(tokens ?? {}, invoiceId);
@@ -192,7 +209,7 @@ export class PaymentsClient {
    */
   async findCheckoutSessionsWithStatus(
     status: "pending" | "cancelled" | "success" | "failure",
-    tokens?: Record<any, any>,
+    tokens?: Record<string, any>,
   ): Promise<CheckoutSession[]> {
     const db = admin.firestore();
     const collection = utilReplaceTokensInString(this.options.sessionsCollection, tokens ?? {});
@@ -208,7 +225,7 @@ export class PaymentsClient {
    * @param tokens Optional tokens to replace in the collection path.
    */
   async findPendingCheckoutSessions(
-    tokens?: Record<any, any>,
+    tokens?: Record<string, any>,
   ): Promise<CheckoutSession[]> {
     return this.findCheckoutSessionsWithStatus("pending", tokens);
   }
@@ -235,7 +252,7 @@ export class PaymentsClient {
   }
 
   private configResolveCheckoutSessionDocumentPath(
-    invoice: Record<any, any>,
+    invoice: Record<string, any>,
     invoiceId: string,
   ): string {
     const collection = utilReplaceTokensInString(this.options.sessionsCollection, {

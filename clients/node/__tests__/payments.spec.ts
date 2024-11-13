@@ -51,9 +51,11 @@ describe("PaymentsClient", () => {
       throw new Error(`Unexpected document path: ${path}`);
     });
 
-    const result = await client.placeInvoice(invoice);
+    const invoiceId = await client.placeInvoice(invoice);
 
-    expect(result.paymentPageURL).to.equal("https://example.com");
+    const session = await client.waitForCheckoutSession(invoiceId, invoice);
+
+    expect(session.paymentPageURL).to.equal("https://example.com");
   });
 
   it("throws timeout error if CheckoutSession is not created within timeout", async () => {
@@ -66,7 +68,9 @@ describe("PaymentsClient", () => {
       throw new Error(`Unexpected collection path: ${collectionPath}`);
     });
 
-    await expect(client.placeInvoice(invoice, { timeoutInMilliseconds: 1 })).to.be.rejectedWith(
+    const invoiceId = await client.placeInvoice(invoice);
+
+    await expect(client.waitForCheckoutSession(invoiceId, invoice, { timeoutInMilliseconds: 1 })).to.be.rejectedWith(
       FirestoreLiqPayError,
       "Timeout waiting for checkout session to be created"
     );
@@ -91,7 +95,9 @@ describe("PaymentsClient", () => {
       throw new Error(`Unexpected document path: ${path}`);
     });
 
-    await expect(client.placeInvoice(invoice)).to.be.rejectedWith(
+    const invoiceId = await client.placeInvoice(invoice);
+
+    await expect(client.waitForCheckoutSession(invoiceId, invoice)).to.be.rejectedWith(
       FirestoreLiqPayError,
       "Error waiting for checkout session to be created"
     );

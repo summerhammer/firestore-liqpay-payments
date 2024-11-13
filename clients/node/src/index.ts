@@ -3,7 +3,7 @@ export { CheckoutSession } from "./session";
 export {
   PaymentsClient,
   PaymentsClientOptions,
-  PlaceInvoiceOptions,
+  WaitForCheckoutSessionOptions,
 } from "./payments";
 
 export { FirestoreLiqPayClientOptions, FirestoreLiqPayClient } from "./client";

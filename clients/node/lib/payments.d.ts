@@ -30,9 +30,13 @@ export interface PaymentsClientOptions {
     timeoutInMilliseconds?: number;
 }
 /**
- * Options for placing an invoice method.
+ * Options for waiting for a checkout session method.
  */
-export interface PlaceInvoiceOptions {
+export interface WaitForCheckoutSessionOptions {
+    /**
+     * The timeout in milliseconds for waiting for a `CheckoutSession` with
+     * filled `paymentPageURL` field to be created.
+     */
     timeoutInMilliseconds?: number;
 }
 /**
@@ -58,44 +62,46 @@ export declare class PaymentsClient {
      * will translate it to a LiqPay Checkout request using the rules defined in
      * the `INVOICE_TO_CHECKOUT_REQUEST_JSONATA` extension's parameter.
      *
-     * @param options Options for placing the invoice.
+     * @returns A promise that resolves when the id of the invoice is created.
+     */
+    placeInvoice(invoice: Record<string, any>): Promise<string>;
+    /**
+     * Waits for a `CheckoutSession` document to be created in Firestore with a
+     * `paymentPageURL` field. This method will listen for changes to the
+     * `CheckoutSession` document in Firestore and resolve when the `paymentPageURL`
+     * or an error is set.
+     * @param invoiceId The ID of the invoice.
+     * @param tokens Optional tokens to replace in the collection path.
+     * @param options Options for waiting for the checkout session.
      *
      * @returns A promise that resolves with a `CheckoutSession` object.
      * The object will contain the `paymentPageURL` field if the checkout request
      * was successful, or an `error` object if the request failed.
      */
-    placeInvoice(invoice: Record<any, any>, options?: PlaceInvoiceOptions): Promise<CheckoutSession>;
-    /**
-     * Waits for a `CheckoutSession` document to be created in Firestore with a
-     * @param ref The reference to the `CheckoutSession` document.
-     * @param timeoutInMilliseconds The timeout in milliseconds to wait for the
-     * `CheckoutSession` document to be created.
-     * @private
-     */
-    private waitForCheckoutSessionWithPaymentPageURL;
+    waitForCheckoutSession(invoiceId: string, tokens?: Record<string, any>, options?: WaitForCheckoutSessionOptions): Promise<CheckoutSession>;
     /**
      * Fetches a `CheckoutSession` document from Firestore.
      * @param invoiceId The ID of the invoice.
      * @param tokens Optional tokens to replace in the collection path.
      */
-    fetchCheckoutSession(invoiceId: string, tokens?: Record<any, any>): Promise<CheckoutSession>;
+    fetchCheckoutSession(invoiceId: string, tokens?: Record<string, any>): Promise<CheckoutSession>;
     /**
      * Cancels a `CheckoutSession` document in Firestore.
      * @param invoiceId The ID of the invoice.
      * @param tokens Optional tokens to replace in the collection path.
      */
-    cancelCheckoutSession(invoiceId: string, tokens?: Record<any, any>): Promise<void>;
+    cancelCheckoutSession(invoiceId: string, tokens?: Record<string, any>): Promise<void>;
     /**
      * Finds `CheckoutSession` documents in Firestore with a specific status.
      * @param status The status to filter by.
      * @param tokens Optional tokens to replace in the collection path.
      */
-    findCheckoutSessionsWithStatus(status: "pending" | "cancelled" | "success" | "failure", tokens?: Record<any, any>): Promise<CheckoutSession[]>;
+    findCheckoutSessionsWithStatus(status: "pending" | "cancelled" | "success" | "failure", tokens?: Record<string, any>): Promise<CheckoutSession[]>;
     /**
      * Finds `CheckoutSession` documents in Firestore with a status of "pending".
      * @param tokens Optional tokens to replace in the collection path.
      */
-    findPendingCheckoutSessions(tokens?: Record<any, any>): Promise<CheckoutSession[]>;
+    findPendingCheckoutSessions(tokens?: Record<string, any>): Promise<CheckoutSession[]>;
     /**
      * Returns the timeout in milliseconds for waiting for a payment to be created.
      * @param timeout

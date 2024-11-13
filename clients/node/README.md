@@ -44,13 +44,33 @@ const client = FirestoreLiqpayClient.createDefault();
 const invoice = createInvoice();
 
 try {
-  const session: CheckoutSession = 
+  const invoiceId: string = 
     await client.payments.placeInvoice(invoice.toDatabaseObject());
-  // Redirect the user to the payment page URL to complete the Checkout
-  console.log("Payment Page URL:", session.paymentPageURL);
+  console.log("Invoice placed successfully", invoiceId);
 } catch (error) {
   console.error("Failed to place invoice", error);
 }
+```
+
+### Wait for the Checkout Session to be created
+
+Ensure that the `waitForCheckoutSession` method is called in a different Node.js 
+event loop iteration after placing the invoice. 
+This is because the `firestore-liqpay-payments` extension listens to Firestore 
+events that trigger after the invoice is placed and the event loop is freed up.
+
+```typescript
+const client = FirestoreLiqpayClient.createDefault();
+
+try {
+  const session: CheckoutSession = 
+    await client.payments.waitForCheckoutSession(invoiceId);
+  // Redirect the user to the payment page URL to complete the Checkout
+  console.log("Payment Page URL:", session.paymentPageURL);
+} catch (error) {
+  console.error("Failed to find checkout session", error);
+}
+
 ```
 
 ## Dependencies
