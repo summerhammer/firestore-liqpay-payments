@@ -7,6 +7,7 @@ import jsonata from "jsonata";
 import {CHECKOUT_SESSION_CONVERTER, CheckoutSession} from "./types";
 import {LiqPayError} from "./liqpay/client";
 import * as events from "./events";
+import * as logs from "./logs";
 
 // MARK: Firestore
 
@@ -15,6 +16,7 @@ export async function firestoreUpdateDatabaseWithPaymentPageURL(
   invoiceId: string,
   paymentPageURL: string,
 ): Promise<void> {
+  logs.updateDatabaseWithPaymentPageURL(invoiceId, paymentPageURL);
 
   const session: CheckoutSession = {
     status: "pending",
@@ -30,9 +32,15 @@ export async function firestoreUpdateDatabaseWithPaymentPageURL(
 
   const db = admin.firestore();
 
-  await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
-    .withConverter(CHECKOUT_SESSION_CONVERTER)
-    .create(session);
+  try {
+    await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
+      .withConverter(CHECKOUT_SESSION_CONVERTER)
+      .create(session);
+    logs.updateDatabaseWithPaymentPageURLSuccess(invoiceId);
+  } catch (e) {
+    logs.updateDatabaseWithPaymentPageURLSuccessFailed(invoiceId, e);
+    throw e;
+  }
 
   await events.recordCheckoutSessionCreatedEvent(
     invoiceId,
@@ -45,6 +53,7 @@ export async function firestoreUpdateDatabaseWithFailedCheckout(
   invoiceId: string,
   error: LiqPayError,
 ): Promise<void> {
+  logs.updateDatabaseWithFailedCheckout(invoiceId, error);
 
   const session: CheckoutSession = {
     status: "failure",
@@ -60,14 +69,21 @@ export async function firestoreUpdateDatabaseWithFailedCheckout(
 
   const db = admin.firestore();
 
-  await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
-    .withConverter(CHECKOUT_SESSION_CONVERTER)
-    .create(session)
+  try {
+    await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
+      .withConverter(CHECKOUT_SESSION_CONVERTER)
+      .create(session);
+    logs.updateDatabaseWithFailedCheckoutSuccess(invoiceId);
+  } catch (e) {
+    logs.updateDatabaseWithFailedCheckoutFailed(invoiceId, e);
+    throw e;
+  }
 }
 
 export async function firestoreUpdateDatabaseWithPaymentStatus(
   status: PaymentStatus,
 ): Promise<void> {
+  logs.updateDatabaseWithPaymentStatus(status.order_id, status);
 
   await events.recordPaymentStatusReceivedEvent(
     status.order_id,
@@ -85,13 +101,27 @@ export async function firestoreUpdateDatabaseWithPaymentStatus(
     errorDetails: errorOrNull?.details ?? null,
   };
 
+  const invoiceId = status.order_id;
+  const invoice = await firestoreFindInvoiceById(invoiceId);
+  if (!invoice) {
+    logs.updateDatabaseWithPaymentStatusFailed(status.order_id, `Invoice ${invoiceId} not found`);
+    throw new Error(`Invoice ${invoiceId} not found`);
+  }
+
+  const sessionPath = configResolveCheckoutSessionDocumentPath(invoice, invoiceId);
+
+  logs.updateDatabaseWithPaymentStatusLogSession(session, sessionPath);
+
   const db = admin.firestore();
 
-  const invoiceId = status.order_id;
-  const invoice = firestoreFindInvoiceById(invoiceId);
-
-  await db.doc(configResolveCheckoutSessionDocumentPath(invoice, invoiceId))
-    .set(session, {merge: true});
+  try {
+    await db.doc(sessionPath)
+      .set(session, {merge: true});
+    logs.updateDatabaseWithPaymentStatusSuccess(invoiceId);
+  } catch (e) {
+    logs.updateDatabaseWithPaymentStatusFailed(status.order_id, e);
+    throw e;
+  }
 
   await events.recordCheckoutSessionUpdatedEvent(
     status.order_id,

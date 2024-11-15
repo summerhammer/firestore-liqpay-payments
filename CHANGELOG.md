@@ -1,3 +1,6 @@
+## Version 0.2.1
+- Fixes an issue where the `CheckoutSession` was not updated with the payment status
+
 ## Version 0.2.0
 - Adds Node.js Client for seamless integration with the extension from Firebase Cloud Functions app
 
