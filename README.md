@@ -4,11 +4,8 @@ A [Firebase Extension](https://firebase.google.com/products/extensions) that
 integrates [LiqPay](https://www.liqpay.ua/en) payments with Cloud Firestore.
 
 ### Installation
-Version 0.1.2 has been accepted by Firebase but is not yet available on the 
-Firebase Extension Hub. It can be installed using this link: [Install Version 0.1.2](https://console.firebase.google.com/project/_/extensions/install?ref=summerhammer/firestore-liqpay-payments@0.1.2).
-
-However, it is recommended to install the latest version, which is currently 
-under review: [Install Version 0.2.1](https://console.firebase.google.com/project/_/extensions/install?ref=summerhammer/firestore-liqpay-payments@0.2.1).
+Version 0.2.1 has been accepted by Firebase but is not yet available on the 
+Extensions Hub. It can be installed using this link: [Install Version 0.2.1](https://console.firebase.google.com/project/_/extensions/install?ref=summerhammer/firestore-liqpay-payments@0.2.1).
 
 ### Development Notes
 
